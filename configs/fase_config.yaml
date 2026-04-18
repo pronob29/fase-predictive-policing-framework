@@ -1,0 +1,118 @@
+# =============================================================================
+# FASE Configuration
+# Fairness Aware Spatial Event Graph — Predictive Policing Framework
+# =============================================================================
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+paths:
+  data_raw:        data/raw
+  data_tensors:    data/tensors
+  results:         results/fase
+  shapefile_dir:   data/raw/shapefiles/zcta
+  acs_csv:         data/raw/acs_data.csv
+  incident_csv:    data/raw/baltimore_part1_crime.csv
+
+# ── Phase 1: Data Engineering ─────────────────────────────────────────────────
+phase1:
+  city:            baltimore
+  years:           [2017, 2018, 2019]        # filter to these years; null = all years
+
+  # Temporal binning
+  freq:            1h                          # '1h' = 1-hour bins (default)
+                                              # '8h' = 8-hour dayparts
+  # Baltimore study bounding box (WGS-84)
+  bbox:
+    lat_min:       39.197
+    lat_max:       39.372
+    lon_min:       -76.713
+    lon_max:       -76.529
+
+  # Sequential train / val / test split (no shuffling — time-series integrity)
+  split:
+    train:         0.70
+    val:           0.15
+    test:          0.15
+
+  # ACS variables to fetch if using the censusdata API fallback
+  # (Not needed if acs_data.csv is provided.)
+  acs_api:
+    survey:        acs5
+    year:          2019
+    variables:
+      pop_total:      B02001_001E
+      pop_black:      B02001_003E
+      median_income:  B19013_001E
+      poverty_denom:  B17001_001E
+      pop_poverty:    B17001_002E
+
+  # Expected feature layout — must match FEATURE_NAMES in build_tensors.py
+  feature_names:
+    - lag_1
+    - lag_2
+    - lag_3
+    - roll_mean_24h
+    - roll_mean_7d
+    - sin_tod
+    - cos_tod
+    - sin_dow
+    - cos_dow
+    - pct_minority
+    - median_income_norm
+    - poverty_rate
+    - patrol_exposure
+
+# ── Phase 2: Graph Construction ───────────────────────────────────────────────
+phase2:
+  geo_adjacency:     queen               # 'queen' or 'knn'
+  knn_k:             5                   # used only when geo_adjacency = knn
+  feat_sim_threshold: 0.5               # cosine-similarity cutoff for A_feat
+  alpha_geo:         0.6                # weight of A_geo in combined adjacency
+  alpha_feat:        0.4                # weight of A_feat in combined adjacency
+  self_loops:        true
+
+# ── Phase 3: Model Architecture ───────────────────────────────────────────────
+phase3:
+  # STGNN (Graph WaveNet-style)
+  stgnn:
+    in_channels:      13                # = len(feature_names)
+    hidden_channels:  64
+    out_channels:     32                # size of base risk embedding mu_v(t)
+    num_layers:       4
+    kernel_size:      2                 # dilated temporal conv kernel
+    dropout:          0.2
+
+  # Hawkes excitation branch
+  hawkes:
+    # alpha and beta are learnable; these are initial values
+    alpha_init:       0.5
+    beta_init:        1.0
+    history_window:   168               # how many past bins to sum (7d at 1H)
+
+  # Zero-Inflated Negative Binomial loss
+  zinb_loss:
+    eps:              1.0e-6            # numerical stability floor
+
+  training:
+    epochs:           100
+    batch_size:       32                # number of time steps per batch
+    learning_rate:    1.0e-3
+    weight_decay:     1.0e-4
+    grad_clip:        5.0
+    seed:             42
+
+# ── Phase 4: Fairness-Constrained Allocation ──────────────────────────────────
+phase4:
+  patrol_budget:     60                 # total patrol units per timestep
+  epsilon:           0.05              # max allowable demographic exposure disparity
+  minority_threshold: 0.5              # ZCTA pct_minority threshold for group=1
+
+# ── Phase 5: Deployment Feedback Simulator ────────────────────────────────────
+phase5:
+  deploy_cycles:     6                  # K deployment cycles
+  detection_base_prob: 0.30            # baseline detection prob with no patrol
+  detection_max_prob:  0.90            # detection prob at full patrol allocation
+  retrain_epochs:    50                # epochs for each incremental retraining
+
+# ── Evaluation Metrics ────────────────────────────────────────────────────────
+metrics:
+  dir_smoothing:     1.0e-6            # additive smoothing for DIR (avoid /0)

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Editors and OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Local data and artifacts
+data/raw/
+data/tensors/
+checkpoints/
+logs/
+results/
+
+# Notebook checkpoints
+.ipynb_checkpoints/

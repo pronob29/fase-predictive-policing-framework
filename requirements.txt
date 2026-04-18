@@ -1,0 +1,38 @@
+# ── Core scientific stack ──────────────────────────────────────────────────────
+numpy>=1.23
+pandas>=1.5
+scipy>=1.9
+
+# ── Deep learning ─────────────────────────────────────────────────────────────
+torch>=2.0
+
+# ── Geospatial (Phase 1 & 2) ──────────────────────────────────────────────────
+geopandas>=0.13
+shapely>=2.0
+pyproj>=3.4
+fiona>=1.9
+
+# Optional: dynamic ZCTA shapefile download (Phase 1)
+# pygris>=0.1.3
+
+# Optional: programmatic ACS data fetch (Phase 1 fallback)
+# censusdata>=0.9
+
+# ── Graph Neural Networks (Phase 2 & 3) ───────────────────────────────────────
+torch-geometric>=2.3
+# torch-scatter, torch-sparse, torch-cluster are required by torch-geometric.
+# Install the versions matching your CUDA / CPU build from:
+#   https://data.pyg.org/whl/
+
+# ── Spatial graph construction (Phase 2) ─────────────────────────────────────
+libpysal>=4.7
+networkx>=3.0
+
+# ── Convex optimisation (Phase 4 fairness allocator) ─────────────────────────
+cvxpy>=1.3
+
+# ── Visualisation ─────────────────────────────────────────────────────────────
+matplotlib>=3.6
+
+# ── Configuration ─────────────────────────────────────────────────────────────
+pyyaml>=6.0
